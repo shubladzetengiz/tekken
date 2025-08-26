@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Счетчик выигрышей Tekken 8</title>
+<!-- Подключаем Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+  }
+  .half {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 6rem;
+    user-select: none;
+    cursor: pointer;
+  }
+  .left {
+    background-color: #dc3545; /* Bootstrap red */
+    color: white;
+  }
+  .right {
+    background-color: #0d6efd; /* Bootstrap blue */
+    color: white;
+  }
+</style>
+</head>
+<body>
+
+<div id="left" class="half left">0</div>
+<div id="right" class="half right">0</div>
+
+<script>
+  function createCounter(element) {
+    let count = 0;
+    let lastTap = 0;
+    let tapTimeout;
+
+    element.textContent = count;
+
+    element.addEventListener('click', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) { // двойной тап (меньше 300 мс)
+        count = Math.max(0, count - 1);
+        element.textContent = count;
+        clearTimeout(tapTimeout);
+      } else {
+        tapTimeout = setTimeout(() => {
+          count++;
+          element.textContent = count;
+        }, 300);
+      }
+      lastTap = now;
+    });
+  }
+
+  createCounter(document.getElementById('left'));
+  createCounter(document.getElementById('right'));
+</script>
+
+</body>
+</html>

@@ -1,69 +1,598 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Счетчик выигрышей Tekken 8</title>
-<!-- Подключаем Bootstrap CSS -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-<style>
-  html, body {
-    height: 100%;
-    margin: 0;
-  }
-  body {
-    display: flex;
-  }
-  .half {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 6rem;
-    user-select: none;
-    cursor: pointer;
-  }
-  .left {
-    background-color: #dc3545; /* Bootstrap red */
-    color: white;
-  }
-  .right {
-    background-color: #0d6efd; /* Bootstrap blue */
-    color: white;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tekken 8 Ultimate Counter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --tekken-red: #ff3344;
+      --tekken-blue: #00ccff;
+      --bg-dark: #0a0a0c;
+      --bg-panel: #141419;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background-color: var(--bg-dark);
+      font-family: 'Orbitron', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Зона счетчиков */
+    .counter-zone {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    .half {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      padding: 20px;
+    }
+    .half:active { transform: scale(0.99); }
+
+    .left { background: linear-gradient(135deg, #1a0507 0%, #4a0d12 100%); color: var(--tekken-red); }
+    .left:hover { background: linear-gradient(135deg, #25080a 0%, #5e1117 100%); }
+
+    .right { background: linear-gradient(135deg, #050f1a 0%, #0d294a 100%); color: var(--tekken-blue); }
+    .right:hover { background: linear-gradient(135deg, #081729 0%, #113661 100%); }
+
+    .score {
+      font-size: clamp(5rem, 20vw, 12rem);
+      font-weight: 900;
+      text-shadow: 0 0 30px currentColor;
+      line-height: 1;
+    }
+
+    .player-label {
+      font-size: clamp(1.2rem, 4vw, 2.5rem);
+      letter-spacing: 2px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      max-width: 90%;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Адаптивная панель управления сверху */
+    .controls-top {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      width: 95%;
+      justify-content: center;
+    }
+
+    .btn-tekken {
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      padding: 10px 16px;
+      backdrop-filter: blur(5px);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-tekken:hover {
+      background: #fff;
+      color: #000;
+      box-shadow: 0 0 15px rgba(255,255,255,0.6);
+    }
+    .btn-save { border-color: #28a745; color: #28a745; }
+    .btn-save:hover { background: #28a745; color: #fff; box-shadow: 0 0 15px rgba(40,167,69,0.6); }
+
+    /* Нижний индикатор комнаты */
+    .room-footer {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 10px;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 576px) {
+      .btn-tekken span {
+        display: none;
+      }
+      .btn-tekken {
+        font-size: 1.2rem;
+        padding: 8px 14px;
+      }
+      .controls-top {
+        top: 10px;
+      }
+    }
+
+    /* Окна кастомных модалок и стартового экрана */
+    .overlay-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 5, 8, 0.97);
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      padding: 20px;
+    }
+
+    .setup-box {
+      background: var(--bg-panel);
+      border: 2px solid #333;
+      padding: 30px;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    }
+
+    .setup-title {
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-align: center;
+      margin-bottom: 25px;
+      background: linear-gradient(45deg, #fff, #888);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .input-dark {
+      background: #1c1c24;
+      border: 1px solid #444;
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      padding: 12px;
+      letter-spacing: 1px;
+    }
+    .input-dark:focus {
+      background: #252530;
+      color: #fff;
+      border-color: var(--tekken-blue);
+      box-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+    }
+
+    /* Модальное окно статистики */
+    .modal-stats-content {
+      background: var(--bg-panel);
+      color: #fff;
+      border: 1px solid #333;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .modal-header { border-bottom: 1px solid #222; }
+    .modal-footer { border-top: 1px solid #222; display: flex; justify-content: space-between; gap: 10px; }
+
+    .stat-badge {
+      background: #1c1c24;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-left: 3px solid #555;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+    }
+
+    .history-table { width: 100%; color: #ccc; font-size: 0.85rem; }
+    .history-table th { color: #666; text-transform: uppercase; font-size: 0.75rem; padding-bottom: 10px; border-bottom: 1px solid #333; }
+    .history-table td { padding: 10px 4px; border-bottom: 1px solid #222; }
+
+    .d-none { display: none !important; }
+  </style>
 </head>
 <body>
 
-<div id="left" class="half left">0</div>
-<div id="right" class="half right">0</div>
+  <div id="setup-screen" class="overlay-screen">
+    <div class="setup-box">
+      <h3 class="setup-title">КОНФИГУРАЦИЯ МАТЧА</h3>
+      
+      <div class="mb-3">
+        <label class="form-label" style="color: #aaa; font-weight: bold; letter-spacing: 1px; font-size: 0.85rem;">НАЗВАНИЕ КОМНАТЫ (ID)</label>
+        <input type="text" id="room-id-input" class="form-control input-dark" placeholder="Например: pool_a" autocomplete="off">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" style="color: var(--tekken-red); font-weight: bold; letter-spacing: 1px; font-size: 0.85rem;">ЛЕВЫЙ УГОЛ (КРАСНЫЙ)</label>
+        <input type="text" id="p1-name-input" class="form-control input-dark" placeholder="Имя Бойца 1" autocomplete="off">
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" style="color: var(--tekken-blue); font-weight: bold; letter-spacing: 1px; font-size: 0.85rem;">ПРАВЫЙ УГОЛ (СИНИЙ)</label>
+        <input type="text" id="p2-name-input" class="form-control input-dark" placeholder="Имя Бойца 2" autocomplete="off">
+      </div>
+
+      <button id="start-match-btn" class="btn btn-tekken w-100 py-3" style="border-color: var(--tekken-red); color: var(--tekken-red); font-weight: bold;">FIGHT</button>
+    </div>
+  </div>
+
+  <div class="counter-zone">
+    <div class="controls-top">
+      <button id="save-btn" class="btn btn-tekken btn-save">💾 <span>СОХРАНИТЬ МАТЧ</span></button>
+      <button id="stats-btn" class="btn btn-tekken" data-bs-toggle="modal" data-bs-target="#statsModal">📊 <span>СТАТИСТИКА & CSV</span></button>
+      <button id="change-room-btn" class="btn btn-tekken">🔄 <span>СМЕНИТЬ КОМНАТУ</span></button>
+    </div>
+
+    <div id="left" class="half left">
+      <div class="player-label" id="p1-label">БОЕЦ 1</div>
+      <div class="score" id="score-left">0</div>
+    </div>
+
+    <div id="right" class="half right">
+      <div class="player-label" id="p2-label">БОЕЦ 2</div>
+      <div class="score" id="score-right">0</div>
+    </div>
+
+    <div class="room-footer" id="room-indicator">КОМНАТА: СТАНДАРТНАЯ</div>
+  </div>
+
+  <div class="modal fade" id="statsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
+      <div class="modal-content modal-stats-content">
+        <div class="modal-header">
+          <h5 class="modal-title" style="letter-spacing: 2px; font-weight: bold; font-size: 1rem;">ТАБЛИЦА ЛИДЕРОВ И ЛОГИ КОМНАТЫ</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          
+          <h6 class="text-uppercase mb-3" style="color: #666; letter-spacing: 1px; font-size: 0.8rem;">Винрейты Бойцов</h6>
+          <div id="leaderboard-zone" class="mb-4"></div>
+
+          <h6 class="text-uppercase mb-3" style="color: #666; letter-spacing: 1px; font-size: 0.8rem;">История Матчей</h6>
+          <div class="table-responsive">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Дата/Время</th>
+                  <th>Бойцы</th>
+                  <th>Счет</th>
+                  <th>Победитель</th>
+                </tr>
+              </thead>
+              <tbody id="modal-history-log"></tbody>
+            </table>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <div>
+            <button id="download-csv-btn" class="btn btn-success btn-sm me-2" style="font-family: 'Orbitron'; font-size: 0.75rem; font-weight: bold;">СКАЧАТЬ CSV ОТЧЕТ</button>
+          </div>
+          <div>
+            <button id="clear-all-data" class="btn btn-danger btn-sm me-2" style="font-family: 'Orbitron'; font-size: 0.75rem;">ОЧИСТИТЬ КОМНАТУ</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" style="font-family: 'Orbitron'; font-size: 0.75rem;">Закрыть</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  function createCounter(element) {
-    let count = 0;
-    let lastTap = 0;
-    let tapTimeout;
+  // Инициализация состояний
+  let roomId = '';
+  let currentFighters = { left: '', right: '' };
+  let scores = { left: 0, right: 0 };
+  let globalHistory = [];
 
-    element.textContent = count;
+  const setupScreen = document.getElementById('setup-screen');
+  const roomInput = document.getElementById('room-id-input');
+  const p1Input = document.getElementById('p1-name-input');
+  const p2Input = document.getElementById('p2-name-input');
+  const p1Label = document.getElementById('p1-label');
+  const p2Label = document.getElementById('p2-label');
+  const roomIndicator = document.getElementById('room-indicator');
 
-    element.addEventListener('click', (e) => {
-      const now = Date.now();
-      if (now - lastTap < 300) { // двойной тап (меньше 300 мс)
-        count = Math.max(0, count - 1);
-        element.textContent = count;
-        clearTimeout(tapTimeout);
-      } else {
-        tapTimeout = setTimeout(() => {
-          count++;
-          element.textContent = count;
-        }, 300);
-      }
-      lastTap = now;
-    });
+  // Чтение параметров URL
+  function getRoomFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('room') ? params.get('room').trim() : null;
   }
 
-  createCounter(document.getElementById('left'));
-  createCounter(document.getElementById('right'));
+  // Загрузка данных конкретной комнаты из LocalStorage
+  function loadRoomData(targetRoomId) {
+    roomId = targetRoomId;
+    console.log(`Loading data for room: ${roomId}`);
+    
+    currentFighters.left = localStorage.getItem(`room_${roomId}_cfg_p1`) || '';
+    currentFighters.right = localStorage.getItem(`room_${roomId}_cfg_p2`) || '';
+    globalHistory = JSON.parse(localStorage.getItem(`room_${roomId}_history`)) || [];
+    
+    scores.left = 0;
+    scores.right = 0;
+    
+    roomIndicator.textContent = `КОМНАТА: ${roomId.toUpperCase()}`;
+  }
+
+  // Проверка первоначального запуска приложения
+  function initApp() {
+    const urlRoom = getRoomFromURL();
+
+    if (urlRoom) {
+      loadRoomData(urlRoom);
+      
+      // Если имена бойцов для этой комнаты ещё не созданы, принудительно открываем настройку, зафиксировав ID комнаты
+      if (!currentFighters.left || !currentFighters.right) {
+        setupScreen.classList.remove('d-none');
+        roomInput.value = roomId;
+        roomInput.disabled = true; // Запрещаем менять комнату на лету в инпуте, если зашли по URL
+        p1Input.value = currentFighters.left;
+        p2Input.value = currentFighters.right;
+      } else {
+        setupScreen.classList.add('d-none');
+        p1Label.textContent = currentFighters.left;
+        p2Label.textContent = currentFighters.right;
+      }
+    } else {
+      // Нет параметра комнаты в URL — показываем чистый экран конфигурации
+      setupScreen.classList.remove('d-none');
+      roomInput.disabled = false;
+      roomInput.value = '';
+      p1Input.value = '';
+      p2Input.value = '';
+    }
+    updateScoreUI();
+  }
+
+  function updateScoreUI() {
+    document.getElementById('score-left').textContent = scores.left;
+    document.getElementById('score-right').textContent = scores.right;
+  }
+
+  // Нажатие кнопки FIGHT (Сохранение настроек)
+  document.getElementById('start-match-btn').addEventListener('click', () => {
+    let targetRoom = roomInput.value.trim() || 'default_room';
+    let p1Name = p1Input.value.trim() || 'БОЕЦ 1';
+    let p2Name = p2Input.value.trim() || 'БОЕЦ 2';
+
+    // Меняем URL без перезагрузки страницы, добавляя параметр
+    const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + `?room=${encodeURIComponent(targetRoom)}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+
+    // Подгружаем базу данных этой комнаты
+    loadRoomData(targetRoom);
+
+    // Переписываем локальные имена
+    currentFighters.left = p1Name;
+    currentFighters.right = p2Name;
+
+    localStorage.setItem(`room_${roomId}_cfg_p1`, p1Name);
+    localStorage.setItem(`room_${roomId}_cfg_p2`, p2Name);
+
+    p1Label.textContent = currentFighters.left;
+    p2Label.textContent = currentFighters.right;
+
+    setupScreen.classList.add('d-none');
+    updateScoreUI();
+  });
+
+  // Кнопка смены комнаты
+  document.getElementById('change-room-btn').addEventListener('click', () => {
+    // Сбрасываем URL до чистого состояния
+    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+    window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+    
+    setupScreen.classList.remove('d-none');
+    roomInput.disabled = false;
+    roomInput.value = roomId;
+    p1Input.value = currentFighters.left;
+    p2Input.value = currentFighters.right;
+  });
+
+  // Логика кликов/тапов по сторонам экрана
+  function bindSide(id, side) {
+    const el = document.getElementById(id);
+    
+    el.addEventListener('click', (e) => {
+      if (e.button === 2) return; // Игнорируем правый клик мыши
+      scores[side]++;
+      updateScoreUI();
+    });
+
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      scores[side] = Math.max(0, scores[side] - 1);
+      updateScoreUI();
+    });
+
+    let touchTimer;
+    el.addEventListener('touchstart', (e) => {
+      touchTimer = setTimeout(() => {
+        scores[side] = Math.max(0, scores[side] - 1);
+        updateScoreUI();
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 600); // Долгий тап 600мс для мобильных для уменьшения очков
+    });
+    el.addEventListener('touchend', () => clearTimeout(touchTimer));
+    el.addEventListener('touchmove', () => clearTimeout(touchTimer));
+  }
+
+  // Рендеринг таблицы рекордов и логов внутри модального окна
+  function rebuildStatsDOM() {
+    const historyBody = document.getElementById('modal-history-log');
+    const leaderboardZone = document.getElementById('leaderboard-zone');
+    
+    historyBody.innerHTML = '';
+    leaderboardZone.innerHTML = '';
+
+    let playerStats = {}; 
+
+    globalHistory.slice().reverse().forEach(match => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${match.date}</td>
+        <td><span style="color:var(--tekken-red)">${match.p1}</span> vs <span style="color:var(--tekken-blue)">${match.p2}</span></td>
+        <td>${match.s1}:${match.s2}</td>
+        <td style="font-weight:bold; color:${match.winner === match.p1 ? 'var(--tekken-red)' : (match.winner === match.p2 ? 'var(--tekken-blue)' : '#fff')}">${match.winner}</td>
+      `;
+      historyBody.appendChild(row);
+
+      if (match.winner !== 'Ничья') {
+        if (!playerStats[match.p1]) playerStats[match.p1] = { wins: 0, total: 0 };
+        if (!playerStats[match.p2]) playerStats[match.p2] = { wins: 0, total: 0 };
+
+        playerStats[match.p1].total++;
+        playerStats[match.p2].total++;
+
+        if (match.winner === match.p1) playerStats[match.p1].wins++;
+        if (match.winner === match.p2) playerStats[match.p2].wins++;
+      }
+    });
+
+    Object.keys(playerStats).forEach(name => {
+      const pData = playerStats[name];
+      const winrate = pData.total > 0 ? Math.round((pData.wins / pData.total) * 100) : 0;
+
+      const div = document.createElement('div');
+      div.className = 'stat-badge';
+      div.innerHTML = `
+        <span style="font-weight:bold; max-width:50%; overflow:hidden; text-overflow:ellipsis;">${name}</span>
+        <span>${pData.wins}П - ${pData.total - pData.wins}П — <span style="color: #28a745">${winrate}% WR</span></span>
+      `;
+      leaderboardZone.appendChild(div);
+    });
+
+    if (globalHistory.length === 0) {
+      historyBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">В этой комнате еще нет сохраненных матчей.</td></tr>';
+      leaderboardZone.innerHTML = '<div class="text-muted text-center py-2">Статистика бойцов пуста.</div>';
+    }
+  }
+
+  // Кнопка "СОХРАНИТЬ МАТЧ"
+  document.getElementById('save-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (scores.left === 0 && scores.right === 0) return;
+
+    let p1 = currentFighters.left;
+    let p2 = currentFighters.right;
+    let winner = scores.left > scores.right ? p1 : (scores.right > scores.left ? p2 : 'Ничья');
+
+    const now = new Date();
+    // Формат времени: "18:20 18 Jun" (на русском языке локали)
+    const optionsTime = { hour: '2-digit', minute: '2-digit' };
+    const optionsDate = { day: 'numeric', month: 'short' };
+    const dateString = now.toLocaleTimeString('ru-RU', optionsTime) + ' ' + now.toLocaleDateString('ru-RU', optionsDate).replace('.', '');
+
+    globalHistory.push({
+      room: roomId,
+      date: dateString,
+      p1: p1,
+      p2: p2,
+      s1: scores.left,
+      s2: scores.right,
+      winner: winner
+    });
+
+    localStorage.setItem(`room_${roomId}_history`, JSON.stringify(globalHistory));
+
+    // Обнуляем текущий счет для следующего сета
+    scores.left = 0;
+    scores.right = 0;
+    updateScoreUI();
+    rebuildStatsDOM();
+  });
+
+  document.getElementById('stats-btn').addEventListener('click', rebuildStatsDOM);
+
+  // Кнопка экспорта CSV
+  document.getElementById('download-csv-btn').addEventListener('click', () => {
+    if (globalHistory.length === 0) {
+      alert('Нет данных для экспорта.');
+      return;
+    }
+
+    // Заголовок в полном соответствии с ТЗ: Room;Time;Player 1;Player 2;Score P1;Score P2;Winner
+    const headers = ['Room', 'Time', 'Player 1', 'Player 2', 'Score P1', 'Score P2', 'Winner'];
+    
+    let csvRows = [];
+    csvRows.push(headers.join(';'));
+
+    globalHistory.forEach(match => {
+      const row = [
+        match.room,
+        match.date,
+        match.p1,
+        match.p2,
+        match.s1,
+        match.s2,
+        match.winner
+      ];
+      // Экранируем возможные точки с запятой в именах игроков во избежание десинхронизации колонок
+      const escapedRow = row.map(text => `"${String(text).replace(/"/g, '""')}"`);
+      csvRows.push(escapedRow.join(';'));
+    });
+
+    const csvContent = csvRows.join('\n');
+    
+    // Добавление UTF-8 BOM (\uFEFF) для автоопределения кодировки в Microsoft Excel (включая кириллицу)
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `rooms_${roomId}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+
+  // Очистка данных комнаты
+  document.getElementById('clear-all-data').addEventListener('click', () => {
+    if (confirm('Это полностью удалит всю историю матчей текущей комнаты. Вы уверены?')) {
+      localStorage.removeItem(`room_${roomId}_history`);
+      globalHistory = [];
+      scores = { left: 0, right: 0 };
+      updateScoreUI();
+      rebuildStatsDOM();
+      
+      const modalEl = document.getElementById('statsModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    }
+  });
+
+  // Старт работы приложения
+  bindSide('left', 'left');
+  bindSide('right', 'right');
+  initApp();
 </script>
 
 </body>

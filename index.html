@@ -31,7 +31,6 @@
       position: relative;
     }
 
-    /* Зона счетчиков */
     .counter-zone {
       display: flex;
       flex: 1;
@@ -77,7 +76,6 @@
       text-overflow: ellipsis;
     }
 
-    /* Адаптивная панель управления сверху */
     .controls-top {
       position: absolute;
       top: 15px;
@@ -110,7 +108,6 @@
     .btn-save { border-color: #28a745; color: #28a745; }
     .btn-save:hover { background: #28a745; color: #fff; box-shadow: 0 0 15px rgba(40,167,69,0.6); }
 
-    /* Нижний индикатор комнаты */
     .room-footer {
       position: absolute;
       bottom: 10px;
@@ -128,19 +125,11 @@
     }
 
     @media (max-width: 576px) {
-      .btn-tekken span {
-        display: none;
-      }
-      .btn-tekken {
-        font-size: 1.2rem;
-        padding: 8px 14px;
-      }
-      .controls-top {
-        top: 10px;
-      }
+      .btn-tekken span { display: none; }
+      .btn-tekken { font-size: 1.2rem; padding: 8px 14px; }
+      .controls-top { top: 10px; }
     }
 
-    /* Окна кастомных модалок и стартового экрана */
     .overlay-screen {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -188,7 +177,6 @@
       box-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
     }
 
-    /* Модальное окно статистики */
     .modal-stats-content {
       background: var(--bg-panel);
       color: #fff;
@@ -196,7 +184,7 @@
       font-family: 'Orbitron', sans-serif;
     }
     .modal-header { border-bottom: 1px solid #222; }
-    .modal-footer { border-top: 1px solid #222; display: flex; justify-content: space-between; gap: 10px; }
+    .modal-footer { border-top: 1px solid #222; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 
     .stat-badge {
       background: #1c1c24;
@@ -211,6 +199,25 @@
     .history-table { width: 100%; color: #ccc; font-size: 0.85rem; }
     .history-table th { color: #666; text-transform: uppercase; font-size: 0.75rem; padding-bottom: 10px; border-bottom: 1px solid #333; }
     .history-table td { padding: 10px 4px; border-bottom: 1px solid #222; }
+
+    /* Зона импорта файлов */
+    .import-zone {
+      border: 2px dashed #444;
+      background: #0d0d11;
+      padding: 15px;
+      text-align: center;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #888;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+    }
+    .import-zone:hover {
+      border-color: var(--tekken-blue);
+      color: #fff;
+      background: #121218;
+    }
 
     .d-none { display: none !important; }
   </style>
@@ -269,6 +276,14 @@
         </div>
         <div class="modal-body">
           
+          <div class="mb-4">
+            <h6 class="text-uppercase mb-2" style="color: #666; letter-spacing: 1px; font-size: 0.8rem;">Автоматическое чтение из файла</h6>
+            <div id="drop-zone" class="import-zone">
+              Перетащите сюда файл room_[название].csv или нажмите для выбора
+              <input type="file" id="csv-file-input" accept=".csv" class="d-none">
+            </div>
+          </div>
+          
           <h6 class="text-uppercase mb-3" style="color: #666; letter-spacing: 1px; font-size: 0.8rem;">Винрейты Бойцов</h6>
           <div id="leaderboard-zone" class="mb-4"></div>
 
@@ -290,7 +305,7 @@
         </div>
         <div class="modal-footer">
           <div>
-            <button id="download-csv-btn" class="btn btn-success btn-sm me-2" style="font-family: 'Orbitron'; font-size: 0.75rem; font-weight: bold;">СКАЧАТЬ CSV ОТЧЕТ</button>
+            <button id="download-csv-btn" class="btn btn-success btn-sm me-2" style="font-family: 'Orbitron'; font-size: 0.75rem; font-weight: bold;">СОХРАНИТЬ СТАТИСТИКУ</button>
           </div>
           <div>
             <button id="clear-all-data" class="btn btn-danger btn-sm me-2" style="font-family: 'Orbitron'; font-size: 0.75rem;">ОЧИСТИТЬ КОМНАТУ</button>
@@ -304,7 +319,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-  // Инициализация состояний
   let roomId = '';
   let currentFighters = { left: '', right: '' };
   let scores = { left: 0, right: 0 };
@@ -317,17 +331,17 @@
   const p1Label = document.getElementById('p1-label');
   const p2Label = document.getElementById('p2-label');
   const roomIndicator = document.getElementById('room-indicator');
+  
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('csv-file-input');
 
-  // Чтение параметров URL
   function getRoomFromURL() {
     const params = new URLSearchParams(window.location.search);
     return params.get('room') ? params.get('room').trim() : null;
   }
 
-  // Загрузка данных конкретной комнаты из LocalStorage
   function loadRoomData(targetRoomId) {
     roomId = targetRoomId;
-    console.log(`Loading data for room: ${roomId}`);
     
     currentFighters.left = localStorage.getItem(`room_${roomId}_cfg_p1`) || '';
     currentFighters.right = localStorage.getItem(`room_${roomId}_cfg_p2`) || '';
@@ -339,18 +353,15 @@
     roomIndicator.textContent = `КОМНАТА: ${roomId.toUpperCase()}`;
   }
 
-  // Проверка первоначального запуска приложения
   function initApp() {
     const urlRoom = getRoomFromURL();
 
     if (urlRoom) {
       loadRoomData(urlRoom);
-      
-      // Если имена бойцов для этой комнаты ещё не созданы, принудительно открываем настройку, зафиксировав ID комнаты
       if (!currentFighters.left || !currentFighters.right) {
         setupScreen.classList.remove('d-none');
         roomInput.value = roomId;
-        roomInput.disabled = true; // Запрещаем менять комнату на лету в инпуте, если зашли по URL
+        roomInput.disabled = true; 
         p1Input.value = currentFighters.left;
         p2Input.value = currentFighters.right;
       } else {
@@ -359,7 +370,6 @@
         p2Label.textContent = currentFighters.right;
       }
     } else {
-      // Нет параметра комнаты в URL — показываем чистый экран конфигурации
       setupScreen.classList.remove('d-none');
       roomInput.disabled = false;
       roomInput.value = '';
@@ -374,20 +384,16 @@
     document.getElementById('score-right').textContent = scores.right;
   }
 
-  // Нажатие кнопки FIGHT (Сохранение настроек)
   document.getElementById('start-match-btn').addEventListener('click', () => {
     let targetRoom = roomInput.value.trim() || 'default_room';
     let p1Name = p1Input.value.trim() || 'БОЕЦ 1';
     let p2Name = p2Input.value.trim() || 'БОЕЦ 2';
 
-    // Меняем URL без перезагрузки страницы, добавляя параметр
     const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + `?room=${encodeURIComponent(targetRoom)}`;
     window.history.pushState({ path: newUrl }, '', newUrl);
 
-    // Подгружаем базу данных этой комнаты
     loadRoomData(targetRoom);
 
-    // Переписываем локальные имена
     currentFighters.left = p1Name;
     currentFighters.right = p2Name;
 
@@ -401,9 +407,7 @@
     updateScoreUI();
   });
 
-  // Кнопка смены комнаты
   document.getElementById('change-room-btn').addEventListener('click', () => {
-    // Сбрасываем URL до чистого состояния
     const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
     window.history.pushState({ path: cleanUrl }, '', cleanUrl);
     
@@ -414,12 +418,11 @@
     p2Input.value = currentFighters.right;
   });
 
-  // Логика кликов/тапов по сторонам экрана
   function bindSide(id, side) {
     const el = document.getElementById(id);
     
     el.addEventListener('click', (e) => {
-      if (e.button === 2) return; // Игнорируем правый клик мыши
+      if (e.button === 2) return;
       scores[side]++;
       updateScoreUI();
     });
@@ -436,13 +439,12 @@
         scores[side] = Math.max(0, scores[side] - 1);
         updateScoreUI();
         if (navigator.vibrate) navigator.vibrate(50);
-      }, 600); // Долгий тап 600мс для мобильных для уменьшения очков
+      }, 600);
     });
     el.addEventListener('touchend', () => clearTimeout(touchTimer));
     el.addEventListener('touchmove', () => clearTimeout(touchTimer));
   }
 
-  // Рендеринг таблицы рекордов и логов внутри модального окна
   function rebuildStatsDOM() {
     const historyBody = document.getElementById('modal-history-log');
     const leaderboardZone = document.getElementById('leaderboard-zone');
@@ -480,9 +482,10 @@
 
       const div = document.createElement('div');
       div.className = 'stat-badge';
+      // Использование интернациональных W и L по ТЗ
       div.innerHTML = `
         <span style="font-weight:bold; max-width:50%; overflow:hidden; text-overflow:ellipsis;">${name}</span>
-        <span>${pData.wins}П - ${pData.total - pData.wins}П — <span style="color: #28a745">${winrate}% WR</span></span>
+        <span>${pData.wins}W - ${pData.total - pData.wins}L — <span style="color: #28a745">${winrate}% WR</span></span>
       `;
       leaderboardZone.appendChild(div);
     });
@@ -493,7 +496,6 @@
     }
   }
 
-  // Кнопка "СОХРАНИТЬ МАТЧ"
   document.getElementById('save-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     if (scores.left === 0 && scores.right === 0) return;
@@ -503,7 +505,6 @@
     let winner = scores.left > scores.right ? p1 : (scores.right > scores.left ? p2 : 'Ничья');
 
     const now = new Date();
-    // Формат времени: "18:20 18 Jun" (на русском языке локали)
     const optionsTime = { hour: '2-digit', minute: '2-digit' };
     const optionsDate = { day: 'numeric', month: 'short' };
     const dateString = now.toLocaleTimeString('ru-RU', optionsTime) + ' ' + now.toLocaleDateString('ru-RU', optionsDate).replace('.', '');
@@ -520,7 +521,6 @@
 
     localStorage.setItem(`room_${roomId}_history`, JSON.stringify(globalHistory));
 
-    // Обнуляем текущий счет для следующего сета
     scores.left = 0;
     scores.right = 0;
     updateScoreUI();
@@ -529,16 +529,14 @@
 
   document.getElementById('stats-btn').addEventListener('click', rebuildStatsDOM);
 
-  // Кнопка экспорта CSV
+  // Кнопка "СОХРАНИТЬ СТАТИСТИКУ" (Экспорт в room_[название].csv)
   document.getElementById('download-csv-btn').addEventListener('click', () => {
     if (globalHistory.length === 0) {
-      alert('Нет данных для экспорта.');
+      alert('Нет данных для сохранения.');
       return;
     }
 
-    // Заголовок в полном соответствии с ТЗ: Room;Time;Player 1;Player 2;Score P1;Score P2;Winner
     const headers = ['Room', 'Time', 'Player 1', 'Player 2', 'Score P1', 'Score P2', 'Winner'];
-    
     let csvRows = [];
     csvRows.push(headers.join(';'));
 
@@ -552,21 +550,19 @@
         match.s2,
         match.winner
       ];
-      // Экранируем возможные точки с запятой в именах игроков во избежание десинхронизации колонок
       const escapedRow = row.map(text => `"${String(text).replace(/"/g, '""')}"`);
       csvRows.push(escapedRow.join(';'));
     });
 
     const csvContent = csvRows.join('\n');
-    
-    // Добавление UTF-8 BOM (\uFEFF) для автоопределения кодировки в Microsoft Excel (включая кириллицу)
     const BOM = '\uFEFF';
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `rooms_${roomId}.csv`);
+    // Изменено название согласно запросу: room_НАЗВАНИЕ.csv
+    link.setAttribute('download', `room_${roomId}.csv`);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -574,7 +570,84 @@
     document.body.removeChild(link);
   });
 
-  // Очистка данных комнаты
+  // Логика автоматического считывания CSV (Парсинг структуры файлов)
+  function handleFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/);
+      if (lines.length < 2) return;
+
+      let importedMatches = [];
+      // Начинаем со второй строчки, пропуская Header
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        // Разделяем по точке с запятой, убирая кавычки экранирования
+        const cells = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').trim());
+        if (cells.length < 7) continue;
+
+        const mRoom = cells[0];
+        const mTime = cells[1];
+        const mP1 = cells[2];
+        const mP2 = cells[3];
+        const mS1 = parseInt(cells[4]) || 0;
+        const mS2 = parseInt(cells[5]) || 0;
+        const mWinner = cells[6];
+
+        importedMatches.push({
+          room: mRoom,
+          date: mTime,
+          p1: mP1,
+          p2: mP2,
+          s1: mS1,
+          s2: mS2,
+          winner: mWinner
+        });
+      }
+
+      if (importedMatches.length > 0) {
+        // Группируем импортированные логи по комнатам и раскладываем по изолированным LocalStorage
+        const grouped = {};
+        importedMatches.forEach(m => {
+          if (!grouped[m.room]) grouped[m.room] = [];
+          grouped[m.room].push(m);
+        });
+
+        Object.keys(grouped).forEach(rName => {
+          localStorage.setItem(`room_${rName}_history`, JSON.stringify(grouped[rName]));
+          // Для удобства берем последних бойцов как дефолтных
+          const lastMatch = grouped[rName][grouped[rName].length - 1];
+          localStorage.setItem(`room_${rName}_cfg_p1`, lastMatch.p1);
+          localStorage.setItem(`room_${rName}_cfg_p2`, lastMatch.p2);
+        });
+
+        alert('Данные из CSV файла успешно считаны и импортированы!');
+        // Перезагружаем интерфейс для текущей комнаты
+        loadRoomData(roomId);
+        p1Label.textContent = currentFighters.left || 'БОЕЦ 1';
+        p2Label.textContent = currentFighters.right || 'БОЕЦ 2';
+        rebuildStatsDOM();
+      } else {
+        alert('Не удалось распознать структуру данных в файле.');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  // Триггеры Drag-and-Drop импорта
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+  
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--tekken-red)'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = '#444'; });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#444';
+    if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+  });
+
   document.getElementById('clear-all-data').addEventListener('click', () => {
     if (confirm('Это полностью удалит всю историю матчей текущей комнаты. Вы уверены?')) {
       localStorage.removeItem(`room_${roomId}_history`);
@@ -589,7 +662,6 @@
     }
   });
 
-  // Старт работы приложения
   bindSide('left', 'left');
   bindSide('right', 'right');
   initApp();
